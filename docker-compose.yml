@@ -5,9 +5,6 @@ services:
         image: palomino/store:backend
         ports:
             - 8000:8000
-        args:
-            STATIC_URL: '/static/'
-        restart: always
         networks:
             - store
         depends_on:
@@ -19,13 +16,14 @@ services:
             - ./saleor/templates/:/app/templates:Z
             - ./saleor/tests/:/app/tests
             # shared volume between worker and api for media
-            - saleor-media:/app/media
+            - store-media:/app/media
         command: python manage.py runserver 0.0.0.0:8000
         env_file: common.env
         environment:
             - JAEGER_AGENT_HOST=jaeger
             - STOREFRONT_URL=http://localhost:3000/
             - DASHBOARD_URL=http://localhost:9000/
+        restart: always
 
     storefront:
         image: palomino/store:frontend
@@ -68,27 +66,23 @@ services:
         volumes:
             - store-redis:/data
 
-    # worker:
-    # build:
-    #   context: ./saleor
-    #   dockerfile: ./Dockerfile
-    #   args:
-    #     STATIC_URL: '/static/'
-    # command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
-    # restart: unless-stopped
-    # networks:
-    #   - saleor-backend-tier
-    # env_file: common.env
-    # depends_on:
-    #   - redis
-    #   - mailhog
-    # volumes:
-    #   - ./saleor/saleor/:/app/saleor:Z,cached
-    #   - ./saleor/templates/:/app/templates:Z,cached
-    #   # shared volume between worker and api for media
-    #   - saleor-media:/app/media
-    # environment:
-    #   - EMAIL_URL=smtp://mailhog:1025
+    worker:
+        image: palomino/store:backend
+        command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
+        networks:
+            - store
+        env_file: common.env
+        depends_on:
+            - redis
+            - mailhog
+        volumes:
+            - ./saleor/saleor/:/app/saleor:Z,cached
+            - ./saleor/templates/:/app/templates:Z,cached
+            # shared volume between worker and api for media
+            - store-media:/app/media
+        environment:
+            - EMAIL_URL=smtp://mailhog:1025
+        restart: always
 
     jaeger:
         image: jaegertracing/all-in-one
