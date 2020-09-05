@@ -1,0 +1,16 @@
+#!/usr/bin/python
+import sys
+import os
+import colorama
+from colorama import Fore, Style
+
+if sys.argv[0] != "./chikatana":
+    print("Comando no valido.")
+    exit(0)
+
+def printHelp():
+    print("Chikatana Command Line:")
+
+if len(sys.argv) == 1:
+    printHelp()
+    exit(0)
